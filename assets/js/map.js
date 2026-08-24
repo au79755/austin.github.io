@@ -28,7 +28,7 @@ const markers = [
   {
     type: "publication",
     curvature: 0,
-    content: '2023 Q2 <a href="https://austinlu.com/publication/2023-05-08-investigating-sample-bias" target="_blank" rel="noopener noreferrer"><strong>Multiple: AI/ML for Human-Computer Interaction</strong></a>',
+    content: '2023 Q2 <a href="https://austinlu.com/publication/2023-05-08-investigating-sample-bias" target="_blank" rel="noopener noreferrer"><strong>Sample Bias in Multilingual Audio Super-resolution</strong></a>',
     place: "Champaign, IL",
     coordinates: [-88.2434, 40.1164]
   },
@@ -41,19 +41,20 @@ const markers = [
   // Experience
   // { type: "ai", curvature: 0.6, content: '2025 Q1 <strong>AI Chatbot Pilot</strong> for city 311 platform', place: "Indiana", coordinates: [-85.15, 41.07] },
   { type: "experience", curvature: 0.2, content: '2025 Q2 <strong>AI Chatbot Demo</strong> for city staff', place: "CA", coordinates: [-122.4194, 37.7749] },
-  { type: "experience", curvature: 0.3, content: '2025 Q4 Showcasing our <strong>AI GovTech Platform</strong>', place: '<a href="https://fall.smartcitiesconnect.org/" target="_blank" rel="noopener noreferrer"><strong>Smart Cities Connect 2025</strong></a> at National Harbor, MD', coordinates: [-77.0369, 38.9638] },
+  { type: "experience", curvature: 0.22, content: '2026 Q3 <strong>Permits &amp; Licensing CRM</strong> with assistive AI', place: "Arvada, CO", coordinates: [-105.0875, 39.8028] },
 
   // AI
+  { type: "ai", curvature: 0.3, content: '2025 Q4 Showcasing our <strong>AI GovTech Platform</strong>', place: '<a href="https://fall.smartcitiesconnect.org/" target="_blank" rel="noopener noreferrer"><strong>Smart Cities Connect 2025</strong></a> at National Harbor, MD', coordinates: [-77.0369, 38.9638] },
   { type: "ai", curvature: 0.3, content: '2025 Q3 <strong>AI Permit Review Pilot</strong> for city plan reviewers', place: "WA", coordinates: [-122.3321, 47.6062] },
   { type: "ai", curvature: 0, content: '2026 Q1 <strong>AI Permit Review Pilot</strong> for city inspectors', place: "TX", coordinates: [-96.8067, 32.7767] },
-  { type: "ai", curvature: 0.6, content: '2026 Q2 Seminar on <strong>AI Permit Review</strong>', place: 'the <a href="https://www.planning.org/conference/" target="_blank" rel="noopener noreferrer"><strong>National Planning Conference 2026</strong></a> in Detroit, MI', coordinates: [-83.05, 42.33] },
+  { type: "ai", curvature: 0.7, content: '2026 Q2 Seminar on <strong>AI Permit Review</strong>', place: 'the <a href="https://www.planning.org/conference/" target="_blank" rel="noopener noreferrer"><strong>National Planning Conference 2026</strong></a> in Detroit, MI', coordinates: [-83.05, 42.33] },
 ];
 
 const d3 = window.d3;
 const topojson = window.topojson;
 
-const radius = 7;
-const radiusHover = 10;
+const radius = 6;
+const radiusHover = 9;
 const container = document.getElementById('map-container');
 let { width, height } = container.getBoundingClientRect();
 if (!width || !height) { width = 1000; height = 600; }
@@ -302,10 +303,10 @@ function showHubInfo(hub) {
 }
 
 function showSharedHubInfo(hubs) {
-  const lines = hubs.map(hub => {
+  const lines = hubs.map(hub => infoLine(hub.key, hub.label));
+  hubs.forEach(hub => {
     const spoke = spokeAtHub(hub.key, hub.coordinates);
-    const text = spoke ? `${spoke.content} in ${spoke.place}` : hub.label;
-    return infoLine(hub.key, text);
+    if (spoke) lines.push(infoLine(hub.key, `${spoke.content} in ${spoke.place}`));
   });
   mapInfo.html(lines.join(""));
   mapInfo.classed("is-visible", true);
