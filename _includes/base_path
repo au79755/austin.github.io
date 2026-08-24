@@ -1,4 +1,11 @@
-{% if site.url %}
+{% comment %}
+  Local `jekyll serve --host 0.0.0.0` rewrites site.url to http://0.0.0.0:4000.
+  Browsers cannot fetch CSS/JS from 0.0.0.0 when you open localhost or a WSL IP.
+  Use root-relative paths in development; keep absolute URLs in production.
+{% endcomment %}
+{% if jekyll.environment == "development" %}
+  {% assign base_path = site.baseurl %}
+{% elsif site.url %}
   {% assign base_path = site.url | append: site.baseurl %}
 {% else %}
   {% assign base_path = site.github.url %}

@@ -11,6 +11,17 @@
   opacity: 1;
 }
 
+.map-info-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.map-info-line + .map-info-line {
+  margin-top: 4px;
+}
+
 #map-container {
   width: 100%;
   aspect-ratio: 2/1;
@@ -63,10 +74,30 @@ svg:focus, .marker:focus {
 }
 /* Marker variants */
 .ai {
-  fill: $info-color;
+  fill: $success-color;
 }
 .experience {
-  fill: $danger-color;
+  fill: $info-color;
+}
+
+.split-half {
+  pointer-events: none;
+  stroke: none;
+}
+
+.split-outline {
+  fill: none;
+  stroke: var(--global-bg-color);
+  stroke-width: 1px;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.hub-hit {
+  fill: transparent;
+  stroke: none;
+  cursor: pointer;
+  pointer-events: all;
 }
 .publication {
   fill: $warning-color;
@@ -120,10 +151,10 @@ svg:focus, .marker:focus {
 
 /* Arc colors inherit section palette */
 .arc.ai {
-  stroke: $info-color;
+  stroke: $success-color;
 }
 .arc.experience {
-  stroke: $danger-color;
+  stroke: $info-color;
 }
 .arc.publication {
   stroke: $warning-color;

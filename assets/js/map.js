@@ -1,14 +1,16 @@
 /* Map integration (D3 + TopoJSON) */
 (function () {
   // Legend config and renderer
+const texasHub = [-96.8067, 32.7767]; // Dallas — PermitSight + NebuLogic
 const legendItems = [
-  { key: "ai", coordinates: [-96.8067, 32.7767], label: '<a href="https://austinlu.com/experience/2025-cofounder" target="_blank" rel="noopener noreferrer"><strong>CTO &amp; Cofounder</strong></a> @ PermitSight' },
+  { key: "ai", coordinates: texasHub, label: '<a href="https://austinlu.com/experience/2025-cofounder" target="_blank" rel="noopener noreferrer"><strong>Co-founder &amp; CTO</strong></a> @ PermitSight' },
+  { key: "experience", coordinates: texasHub, label: '<a href="https://austinlu.com/experience/2025-nebulogic" target="_blank" rel="noopener noreferrer"><strong>AI Development Lead</strong></a> @ NebuLogic' },
   { key: "publication", coordinates: [-88.2434, 40.1164], label: '<a href="https://acsinger.ece.illinois.edu/research/group-members/" target="_blank" rel="noopener noreferrer">Ex-AI/ML Research</a> @ University of Illinois' },
 ];
 
 // Markers config
 const markers = [
-  // Ex-AI/ML Research @ Illinois (Papers, Presentations)
+  // Publication
   { type: "publication", curvature: 0.14, content: '2022 Q2 <a href="https://austinlu.com/publication/2022-05-08-mechatronic" target="_blank" rel="noopener noreferrer"><strong>Robotic Orchestration</strong></a>', place: "Nashville, TN", coordinates: [-86.7816, 36.1627] },
   { type: "publication", curvature: 0.4, content: '2022 Q4 <a href="https://austinlu.com/publication/2022-10-01-cloud-research.md" target="_blank" rel="noopener noreferrer"><strong>Cloud Robotics</strong></a>', place: "Munich, Germany", coordinates: [-68, 42.5] },
   {
@@ -36,11 +38,13 @@ const markers = [
   { type: "publication", curvature: 0.14, content: '2024 Q3 <a href="https://austinlu.com/publication/2024-08-27-discovery-partners" target="_blank" rel="noopener noreferrer"><strong>International Innovation Showcase</strong></a>', place: "Chicago, IL", coordinates: [-87.6298, 41.8781] },
   { type: "publication", curvature: 0.14, content: '2025 Q3 <a href="https://austinlu.com/publication/2025-07-05-latent-fxlms" target="_blank" rel="noopener noreferrer"><strong>AI/ML: Latent Signal Processing</strong></a>', place: "Malaga, Spain", coordinates: [-71.5, 39] },
 
-  // CTO (Pilots, Talks)
+  // Experience
   // { type: "ai", curvature: 0.6, content: '2025 Q1 <strong>AI Chatbot Pilot</strong> for city 311 platform', place: "Indiana", coordinates: [-85.15, 41.07] },
-  { type: "ai", curvature: 0.2, content: '2025 Q2 <strong>AI Chatbot Demo</strong> for city staff', place: "CA", coordinates: [-122.4194, 37.7749] },
+  { type: "experience", curvature: 0.2, content: '2025 Q2 <strong>AI Chatbot Demo</strong> for city staff', place: "CA", coordinates: [-122.4194, 37.7749] },
+  { type: "experience", curvature: 0.3, content: '2025 Q4 Showcasing our <strong>AI GovTech Platform</strong>', place: '<a href="https://fall.smartcitiesconnect.org/" target="_blank" rel="noopener noreferrer"><strong>Smart Cities Connect 2025</strong></a> at National Harbor, MD', coordinates: [-77.0369, 38.9638] },
+
+  // AI
   { type: "ai", curvature: 0.3, content: '2025 Q3 <strong>AI Permit Review Pilot</strong> for city plan reviewers', place: "WA", coordinates: [-122.3321, 47.6062] },
-  { type: "ai", curvature: 0.3, content: '2025 Q4 Showcasing our <strong>AI GovTech Platform</strong>', place: '<a href="https://fall.smartcitiesconnect.org/" target="_blank" rel="noopener noreferrer"><strong>Smart Cities Connect 2025</strong></a> at National Harbor, MD', coordinates: [-77.0369, 38.9638] },
   { type: "ai", curvature: 0, content: '2026 Q1 <strong>AI Permit Review Pilot</strong> for city inspectors', place: "TX", coordinates: [-96.8067, 32.7767] },
   { type: "ai", curvature: 0.6, content: '2026 Q2 Seminar on <strong>AI Permit Review</strong>', place: 'the <a href="https://www.planning.org/conference/" target="_blank" rel="noopener noreferrer"><strong>National Planning Conference 2026</strong></a> in Detroit, MI', coordinates: [-83.05, 42.33] },
 ];
@@ -48,8 +52,8 @@ const markers = [
 const d3 = window.d3;
 const topojson = window.topojson;
 
-const radius = 5;
-const radiusHover = 8;
+const radius = 7;
+const radiusHover = 10;
 const container = document.getElementById('map-container');
 let { width, height } = container.getBoundingClientRect();
 if (!width || !height) { width = 1000; height = 600; }
@@ -109,6 +113,7 @@ d3.json(mapDataUrl).then(data => {
       .attr("d", pathGenerator);
 
   drawMarkers();
+  drawHubs();
   drawArcs();
   renderLegend();
 });
@@ -119,50 +124,192 @@ svg.on("click", () => {
     stickyMarker = null;
     mapInfo.classed("is-visible", false);
     gMap.selectAll("path.arc").classed("is-highlight", false);
-    gMarkers.selectAll("circle.marker").transition().duration(150).attr("r", radius);
+    resetMarkerSizes();
   }
 });
 
+function coordKey(coordinates) {
+  return `${Math.round(coordinates[0] * 10000)}-${Math.round(coordinates[1] * 10000)}`;
+}
+
+function sameCoord(a, b) {
+  return Array.isArray(a) && Array.isArray(b) && coordKey(a) === coordKey(b);
+}
+
+function isOnHub(marker) {
+  return legendItems.some(hub => hub.coordinates && sameCoord(hub.coordinates, marker.coordinates));
+}
+
+function spokeAtHub(type, coordinates) {
+  return markers.find(m => m.type === type && sameCoord(m.coordinates, coordinates));
+}
+
+function resetMarkerSizes() {
+  gMarkers.selectAll("circle.marker").transition().duration(150).attr("r", radius);
+  gMarkers.selectAll(".split-disc").transition().duration(150).attr("transform", "scale(1)");
+}
+
+function semicirclePath(r, side) {
+  const sweep = side === "right" ? 1 : 0;
+  return `M 0,${-r} A ${r},${r} 0 0,${sweep} 0,${r} Z`;
+}
+
+function highlightType(type) {
+  highlightTypes([type]);
+}
+
+function highlightTypes(types) {
+  const set = new Set(types);
+  gMap.selectAll("path.arc").classed("is-highlight", dd => set.has(dd.type));
+  raiseHighlightedArcs();
+}
+
+function raiseHighlightedArcs() {
+  gMap.selectAll("path.arc.is-highlight").raise();
+}
+
+function bindMarkerHover(selection, getType, getRadius) {
+  selection
+    .on("mouseenter", function (event, d) {
+      d3.select(this).transition().duration(150).attr("r", getRadius(true));
+      highlightType(getType(d));
+    })
+    .on("mouseleave", function (event, d) {
+      if (!stickyMarker || stickyMarker !== d3.select(this).datum()) {
+        d3.select(this).transition().duration(150).attr("r", getRadius(false));
+      }
+      if (!stickyMarker) gMap.selectAll("path.arc").classed("is-highlight", false);
+    });
+}
+
 function drawMarkers() {
-  gMarkers.selectAll("circle.marker")
-      .data(markers, d => d.id || getMarkerId(d))
+  const visible = markers.filter(m => !isOnHub(m));
+  const dots = gMarkers.selectAll("circle.marker.spoke")
+      .data(visible, d => d.id || getMarkerId(d))
       .enter()
       .append("circle")
-      .attr("class", d => `marker ${d.type}`)
+      .attr("class", d => `marker spoke ${d.type}`)
       .attr("data-id", d => d.id || getMarkerId(d))
       .attr("vector-effect", "non-scaling-stroke")
       .attr("cx", d => projection(d.coordinates)[0])
       .attr("cy", d => projection(d.coordinates)[1])
       .attr("r", radius)
-      .on("mouseenter", function (event, d) {
-          d3.select(this).transition().duration(150).attr("r", radiusHover);
-          gMap.selectAll("path.arc").classed("is-highlight", dd => dd.type === d.type);
-          raiseHighlightedArcs();
-      })
-      .on("mouseleave", function () {
-          if (!stickyMarker || stickyMarker !== d3.select(this).datum()) {
-            d3.select(this).transition().duration(150).attr("r", radius);
-          }
-          if (!stickyMarker) gMap.selectAll("path.arc").classed("is-highlight", false);
-      })
       .on("click", function (event, d) {
           event.stopPropagation();
-          gMarkers.selectAll("circle.marker").transition().duration(150).attr("r", radius);
+          resetMarkerSizes();
           d3.select(this).transition().duration(150).attr("r", radiusHover);
           stickyMarker = d;
           showInfo(d);
       });
+  bindMarkerHover(dots, d => d.type, hovering => hovering ? radiusHover : radius);
+}
+
+function drawHubs() {
+  const groups = d3.group(
+    legendItems.filter(d => Array.isArray(d.coordinates)),
+    d => coordKey(d.coordinates)
+  );
+
+  groups.forEach(items => {
+    const coords = items[0].coordinates;
+    const [cx, cy] = projection(coords);
+    const g = gMarkers.append("g")
+      .attr("class", "hub-marker")
+      .attr("transform", `translate(${cx},${cy})`);
+
+    const ai = items.find(d => d.key === "ai");
+    const experience = items.find(d => d.key === "experience");
+
+    if (ai && experience) {
+      const stack = { keys: ["ai", "experience"], hubs: [ai, experience], coordinates: coords };
+      g.datum(stack);
+
+      const disc = g.append("g").attr("class", "split-disc");
+      disc.append("path")
+        .attr("class", "split-half ai")
+        .attr("d", semicirclePath(radius, "left"));
+      disc.append("path")
+        .attr("class", "split-half experience")
+        .attr("d", semicirclePath(radius, "right"));
+      disc.append("circle")
+        .attr("class", "split-outline")
+        .attr("r", radius);
+
+      const growStack = (hovering) => {
+        const scale = hovering ? radiusHover / radius : 1;
+        disc.transition().duration(150).attr("transform", `scale(${scale})`);
+      };
+
+      g.append("circle")
+        .attr("class", "hub-hit")
+        .attr("r", radiusHover)
+        .on("mouseenter", () => {
+          growStack(true);
+          highlightTypes(stack.keys);
+        })
+        .on("mouseleave", () => {
+          if (stickyMarker !== stack) growStack(false);
+          if (!stickyMarker) gMap.selectAll("path.arc").classed("is-highlight", false);
+        })
+        .on("click", (event) => {
+          event.stopPropagation();
+          resetMarkerSizes();
+          growStack(true);
+          stickyMarker = stack;
+          showSharedHubInfo(stack.hubs);
+        });
+      return;
+    }
+
+    items.forEach(hub => {
+      const dot = g.append("circle")
+        .datum(hub)
+        .attr("class", `marker hub ${hub.key}`)
+        .attr("vector-effect", "non-scaling-stroke")
+        .attr("r", radius)
+        .on("click", function (event, d) {
+          event.stopPropagation();
+          resetMarkerSizes();
+          d3.select(this).transition().duration(150).attr("r", radiusHover);
+          stickyMarker = d;
+          showHubInfo(d);
+        });
+      bindMarkerHover(dot, d => d.key, hovering => hovering ? radiusHover : radius);
+    });
+  });
 }
 
 function getMarkerId(d) {
   return `${d.type}-${Math.round(d.coordinates[0]*10000)}-${Math.round(d.coordinates[1]*10000)}`;
 }
 
+function legendSwatch(type) {
+  return `<svg class="legend-dot ${type}" width="11" height="11" viewBox="0 0 11 11" aria-hidden="true" focusable="false"><circle cx="5.5" cy="5.5" r="5"></circle></svg>`;
+}
+
+function infoLine(type, html) {
+  return `<div class="map-info-line">${legendSwatch(type)}<span>${html}</span></div>`;
+}
+
 function showInfo(d) {
-  mapInfo.html(`${d.content} in ${d.place}`);
+  mapInfo.html(infoLine(d.type, `${d.content} in ${d.place}`));
   mapInfo.classed("is-visible", true);
-  gMap.selectAll("path.arc").classed("is-highlight", dd => dd.type === d.type);
-  raiseHighlightedArcs();
+  highlightType(d.type);
+}
+
+function showHubInfo(hub) {
+  showSharedHubInfo([hub]);
+}
+
+function showSharedHubInfo(hubs) {
+  const lines = hubs.map(hub => {
+    const spoke = spokeAtHub(hub.key, hub.coordinates);
+    const text = spoke ? `${spoke.content} in ${spoke.place}` : hub.label;
+    return infoLine(hub.key, text);
+  });
+  mapInfo.html(lines.join(""));
+  mapInfo.classed("is-visible", true);
+  highlightTypes(hubs.map(hub => hub.key));
 }
 
 function renderLegend() {
@@ -188,8 +335,8 @@ function renderLegend() {
       .attr("focusable", false);
 
   svgs.each(function(d) {
-      const s = d3.select(this);
-      s.append("circle")
+      d3.select(this)
+          .append("circle")
           .attr("cx", 5.5)
           .attr("cy", 5.5)
           .attr("r", 5);
@@ -228,6 +375,7 @@ function drawArcs() {
     const hubId = `hub-${type}`;
     const list = markers.filter(m => m.type === type && Array.isArray(m.coordinates));
     list.forEach(spoke => {
+      if (sameCoord(hubCoords, spoke.coordinates)) return;
       const spokeId = spoke.id || getMarkerId(spoke);
       const dPath = buildCurvedArcPath(hubCoords, spoke.coordinates, spoke.curvature);
       arcs.push({ type, sourceId: hubId, targetId: spokeId, d: dPath });
